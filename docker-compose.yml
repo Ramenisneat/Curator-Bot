@@ -1,0 +1,13 @@
+version: '3.7'
+
+services:
+  hbot:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    environment:
+      - TOKEN=${TOKEN}
+      - ID=${ID}
+      - SECRET=${SECRET}
+    restart: unless-stopped
+
