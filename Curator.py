@@ -13,11 +13,13 @@ class Curator:
         self.curated = []
 
     def getPost(self,subreddit):
-        for post in self.curator.upvoted():
-            if post.subreddit == subreddit:
-                if post.id not in self.curated:
-                    self.curated.append(post.id)
-                    return post
+
+        for post in self.curator.upvoted(limit = 2):
+            if subreddit is not None:
+                if post.subreddit == subreddit:
+                    if post.id not in self.curated:
+                        self.curated.append(post.id)
+                        return post
 
 
 
