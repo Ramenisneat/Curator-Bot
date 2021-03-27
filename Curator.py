@@ -1,4 +1,7 @@
 import praw
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class Curator:
     def __init__(self,id,secret,name):
@@ -19,7 +22,8 @@ class Curator:
 
 
 def main():
-    curator = Curator("KqwmYCKEuAJrvA","IwEbSd_jYWZVdlGwo2McncQtr4XKSg","Ramenisneat")
+    curator = Curator(os.getenv("ID"),os.getenv("SECRET"),"Ramenisneat")
+    print(curator.getPost("Hentai"))
 
 
 
