@@ -10,17 +10,15 @@ load_dotenv()
 Subreddit = "Hentai"
 Redditor = "Ramenisneat"
 Channel = None
-curator = None
+curator = Curator.Curator(os.getenv("ID"), os.getenv("SECRET"), Redditor)
 
 
 def main():
     # curator = Curator.Curator(os.getenv("ID"), os.getenv("SECRET"), os.getenv("REDDITOR"))
     client = discord.Client()
 
+    #Gathers recent upvoted posts from a redditor
     async def upvoteStream():
-        global curator
-        global Channel
-        global Subreddit
         while True:
             if curator is not None and Subreddit is not None and Channel is not None:
                 post = curator.getUpvoted(Subreddit)
@@ -39,10 +37,11 @@ def main():
                     channel = client.get_channel(Channel)
                     await channel.send(embed=e)
 
+
             await sleep(10)
 
+    #For posts on r/Hentai. Get's the content from the first comment
     async def getSauce(post):
-        global Channel
         sauce = post.comments[0]
         if sauce.author != "HentaiSauce_Bot":
             await client.get_channel(Channel).send(
@@ -52,14 +51,13 @@ def main():
             links = links.group(0)[15:-3]
             links = links.split(" | ")
             e = discord.Embed(title="Sauce from HentaiSauce_Bot", description="\n".join(
-                links) + "Please be aware the Hentaisauce_bot is not 100% accurate and doesn't account for post deletions.",
+                links) + "\nPlease be aware the Hentaisauce_bot is not 100% accurate and doesn't account for post deletions.",
                               color=0x800080, image="https://www.userlogos.org/files/logos/zoinzberg/SauceNAO.png")
             await client.get_channel(Channel).send(embed=e)
 
     @client.event
     async def on_ready():
         global curator
-        global Redditor
         print("ready")
         # Creates custome coroutine
         client.loop.create_task(upvoteStream())
@@ -75,15 +73,22 @@ def main():
         if message.author == client.user:
             return
         if message.content.startswith("~get"):
-            if curator is not None and Subreddit is not None:
-                post = curator.getPost(Subreddit)
-                e = discord.Embed(title=post.title, description=post.permalink, color=0xFF5700, image=post.url)
-                e.set_image(url=post.url)
-                print(post.url)
-                await message.channel.send(embed=e)
+            sub = message.content[5:]
+            print(sub)
+            if curator.subExists(sub) or sub == "*":
+                if curator is not None and sub is not None:
+                    post = curator.getUpvoted(sub)
+                    if post is not None:
+                        e = discord.Embed(title=post.title, description=post.permalink, color=0xFF5700, image=post.url)
+                        e.set_image(url=post.url)
+                        await message.channel.send(embed=e)
+                    else:
+                        await message.channel.send(f"No new posts were upvoted by {Redditor} on {sub}")
+                else:
+                    await message.channel.send("Please set up the 'Redditor' properly")
             else:
-                await message.channel.send(
-                    "Please set the Subreddit and/or the Redditor. You may also have to set the Channel")
+                await message.channel.send(f"{sub} does not exist. Please check for typos")
+
 
         elif message.content.startswith("~set"):
             if message.content[5:8] == "red":
@@ -91,35 +96,38 @@ def main():
                 if check:
                     Redditor = message.content[9:]
                     curator = Curator.Curator(os.getenv("ID"), os.getenv("SECRET"), Redditor)
-                    await message.channel.send(f"Curator set to {Redditor}")
+                    await message.channel.send(f"Redditor set to {Redditor}")
                 else:
                     await message.channel.send(
-                        f"{message.content[9:]} not found/cannot be accessed, please check for typos")
+                        f"{message.content[9:]} not found/cannot be accessed, please check for typos (The redditor must make their upvotes public)")
 
             elif message.content[5:8] == "sub":
                 check = curator.subExists(message.content[9:])
-                if check:
+                if check or message.content[9:] =="*":
                     Subreddit = message.content[9:]
                     await message.channel.send(f"Subreddit set to {Subreddit}")
 
                 else:
                     await message.channel.send(
-                        f"{message.content[9:]} not found/cannot be accessed, please check for typos. (The redditor must make their upvotes public)")
+                        f"{message.content[9:]} not found/cannot be accessed, please check for typos.")
 
             elif message.content[5:8] == "cha":
-                Channel = int(message.content[9:])
-                if client.get_channel(Channel) is None:
-                    await message.channel.send(
-                        "Channel not found. Channel's must be set using their correponding id's.")
-                    Channel = None
-                elif type(client.get_channel(Channel)) is not discord.channel.TextChannel:
-                    await message.channel.send("Channels can only be set to text channels.")
-                    Channel = None
-                else:
-                    await (client.get_channel(Channel)).send("Channel set to here")
+            #     Channel = int(message.content[9:])
+            #     if client.get_channel(Channel) is None:
+            #         await message.channel.send(
+            #             "Channel not found. Channel's must be set using their correponding id's.")
+            #         Channel = None
+            #     elif type(client.get_channel(Channel)) is not discord.channel.TextChannel:
+            #         await message.channel.send("Channels can only be set to text channels.")
+            #         Channel = None
+            #     else:
+            #         await (client.get_channel(Channel)).send("Channel set to here")
+            #
+            # else:
+            #     message.channel.send("Command not found")
+                Channel = message.channel.id
+                await message.channel.send("Channel set to here")
 
-            else:
-                message.channel.send("Command not found")
 
 
         elif message.content.startswith("~current"):
@@ -138,7 +146,7 @@ def main():
             e.add_field(name="~set cha <channelID>",
                         value="Sets the bot's target text channel. You can get the ID of a text channel by right clicking it and selecting 'Copy ID'.")
             e.add_field(name="~curent", value="Displays current settings.")
-            e.add_field(name="Get Sauce", value="Displays current settings.")
+            e.add_field(name="Get Sauce", value="Use the :smirk: reaction on any curator-bot post to get the sauce")
 
             await message.channel.send(embed=e)
 
